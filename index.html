@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2P Energy Trading Platform</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14; --bg2: #141720; --bg3: #1c2030;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0; --text2: #8b90a0; --text3: #555a6a;
+    --green: #4ade80; --green-dim: rgba(74,222,128,0.12);
+    --orange: #fb923c; --orange-dim: rgba(251,146,60,0.12);
+    --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.12);
+    --yellow: #fbbf24; --purple: #a78bfa; --purple-dim: rgba(167,139,250,0.12);
+    --radius: 10px; --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display','Segoe UI',system-ui,sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* Header */
+  header { border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+  .logo-icon { width: 28px; height: 28px; background: var(--green-dim); border: 1px solid rgba(74,222,128,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .status-pill { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border2); color: var(--text2); display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; padding: 1rem 2rem 0; border-bottom: 1px solid var(--border); }
+  .tab { padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--text2); border-radius: var(--radius) var(--radius) 0 0; cursor: pointer; border: 1px solid transparent; border-bottom: none; transition: all 0.15s; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); background: var(--bg2); border-color: var(--border); }
+
+  /* Layout */
+  main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Upload */
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 1.5rem; background: var(--bg2); }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--green); background: var(--green-dim); }
+  .upload-icon { font-size: 1.75rem; margin-bottom: 0.5rem; color: var(--text3); }
+  .upload-zone h3 { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .upload-zone p { font-size: 12px; color: var(--text2); }
+  .file-name { margin-top: 6px; font-size: 12px; color: var(--green); font-weight: 500; }
+
+  /* Two upload zones side by side */
+  .upload-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+  @media (max-width: 640px) { .upload-pair { grid-template-columns: 1fr; } }
+  .upload-zone.sell-zone:hover, .upload-zone.sell-zone.drag-over { border-color: var(--green); background: var(--green-dim); }
+  .upload-zone.buy-zone:hover, .upload-zone.buy-zone.drag-over { border-color: var(--orange); background: var(--orange-dim); }
+
+  /* Run button */
+  /* Grida rate inputs */
+  .rate-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  .rate-panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.875rem; display: flex; align-items: center; gap: 6px; }
+  .rate-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rate-field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+  .rate-field input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 8px 10px; border-radius: var(--radius); font-size: 14px; font-weight: 500; outline: none; }
+  .rate-field input:focus { border-color: var(--green); }
+  .rate-hint { font-size: 11px; color: var(--text3); margin-top: 8px; }
+  /* Leaderboard */
+  .leaderboard { margin-bottom: 1.75rem; }
+  .lb-row { display: grid; grid-template-columns: 36px 64px 130px 64px 80px 96px 96px 106px 96px 56px; gap: 6px; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 12px; transition: background 0.1s; }
+  .lb-row:hover { background: var(--bg3); }
+  .lb-header { background: var(--bg3); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); border-radius: var(--radius) var(--radius) 0 0; }
+  .lb-header:hover { background: var(--bg3); }
+  .lb-rank { font-size: 16px; }
+  .lb-score { font-size: 15px; font-weight: 700; }
+  .lb-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .lb-bar { height: 5px; border-radius: 3px; background: var(--border2); width: 50px; flex-shrink: 0; overflow: hidden; }
+  .lb-bar-fill { height: 100%; border-radius: 3px; }
+  .lb-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .run-btn { width: 100%; padding: 12px; background: var(--green-dim); border: 1px solid rgba(74,222,128,0.4); color: var(--green); border-radius: var(--radius-lg); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 1.5rem; }
+  .run-btn:hover { background: rgba(74,222,128,0.2); }
+  .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 1.25rem; display: none; }
+  .alert-error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+  .alert-success { background: var(--green-dim); border: 1px solid rgba(74,222,128,0.3); color: var(--green); }
+
+  /* Loading */
+  .loading { display: none; text-align: center; padding: 2rem; color: var(--text2); font-size: 13px; }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Section */
+  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.875rem; }
+
+  /* Metrics */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; margin-bottom: 1.75rem; }
+  .metric-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .metric-value { font-size: 21px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.orange { color: var(--orange); }
+  .metric-value.blue { color: var(--blue); }
+  .metric-value.purple { color: var(--purple); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Cards */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 12px; overflow: hidden; }
+  .card-header { padding: 0.875rem 1.125rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 13px; font-weight: 500; }
+  .card-body { padding: 1.125rem; }
+
+  /* Dataset summary grid */
+  .dataset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.75rem; }
+  @media (max-width: 640px) { .dataset-grid { grid-template-columns: 1fr; } }
+  .dataset-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .dataset-header { padding: 10px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+  .dataset-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dataset-header span { font-size: 13px; font-weight: 500; }
+  .dataset-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+  .dataset-stat { background: var(--bg2); padding: 10px 12px; }
+  .dataset-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .dataset-stat-value { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+  /* Per-user mini table */
+  .user-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .user-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .user-table th { padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); border-bottom: 1px solid var(--border); background: var(--bg3); }
+  .user-table tr:last-child td { border-bottom: none; }
+  .user-table tr:hover td { background: var(--bg3); }
+
+  /* Charts */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.75rem; }
+  @media (max-width: 760px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.125rem; }
+  .chart-title { font-size: 13px; font-weight: 500; margin-bottom: 0.75rem; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.main-table thead th { padding: 9px 13px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--bg3); }
+  table.main-table tbody td { padding: 9px 13px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  table.main-table tbody tr:last-child td { border-bottom: none; }
+  table.main-table tbody tr:hover { background: var(--bg3); }
+
+  /* Badge */
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.03em; }
+  .badge-sell { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+  .badge-buy { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(251,146,60,0.25); }
+  .badge-idle { background: rgba(255,255,255,0.04); color: var(--text3); border: 1px solid var(--border); }
+  .badge-grida { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+  .badge-matched { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(167,139,250,0.25); }
+
+  /* Controls */
+  .controls-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .controls-row label { font-size: 12px; color: var(--text2); }
+  select { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 6px 10px; border-radius: var(--radius); font-size: 13px; cursor: pointer; outline: none; }
+
+  /* Pagination */
+  .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 1.125rem; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); }
+  .btn { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 5px 11px; border-radius: var(--radius); font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { border-color: var(--green); color: var(--green); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn:disabled:hover { border-color: var(--border2); color: var(--text); }
+
+  /* Batt bar */
+  .batt-bar-wrap { display: flex; align-items: center; gap: 5px; }
+  .batt-bar { width: 44px; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .batt-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+  .batt-pct { font-size: 11px; color: var(--text2); min-width: 28px; }
+
+  /* Grida breakdown */
+  .grida-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.75rem; }
+  @media (max-width: 640px) { .grida-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    P2P Energy Trading
+  </div>
+  <div class="status-pill" id="statusPill"><span class="status-dot"></span>API Online</div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('matching')">⚡ Matching Engine</div>
+  <div class="tab" onclick="switchTab('dashboard')">📂 History & Dataset</div>
+  <div class="tab" onclick="switchTab('forecast')">🤖 AI Forecast</div>
+  <div class="tab" onclick="switchTab('comparison')">📈 Comparison</div>
+</div>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  TAB 2: HISTORY & DATASET                                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tab-dashboard" class="tab-content">
+
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">📂</div>
+      <h3>Upload History CSV</h3>
+      <p>Drag & drop or click to select — history_userX_prosumer.csv</p>
+      <div class="file-name" id="fileName"></div>
+      <input type="file" id="csvInput" accept=".csv" style="display:none">
+    </div>
+
+    <div class="alert" id="alertDash"></div>
+    <div class="loading" id="loadingDash"><span class="spinner"></span>Processing data...</div>
+
+    <div id="dashboardContent" style="display:none">
+      <p class="section-title">History Overview</p>
+      <div class="metrics-grid" id="metricsGrid"></div>
+      <div class="controls-row">
+        <label>Filter day:</label>
+        <select id="daySelect"></select>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Solar & Consumption (Wh)</div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Solar</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>Consumption</div>
+          </div>
+          <div style="position:relative;height:190px"><canvas id="chartSolar" role="img" aria-label="Solar generation and consumption per hour"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Battery Level (Wh)</div>
+          <div class="legend"><div class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>Battery</div></div>
+          <div style="position:relative;height:190px"><canvas id="chartBattery" role="img" aria-label="Battery level per hour"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Power Sell & Buy (Wh)</div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Sell</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>Buy</div>
+          </div>
+          <div style="position:relative;height:190px"><canvas id="chartTrade" role="img" aria-label="Power sell and buy per hour"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Price per Hour (₩)</div>
+          <div class="legend"><div class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>Price</div></div>
+          <div style="position:relative;height:190px"><canvas id="chartPrice" role="img" aria-label="Price per hour in Won"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Hourly Data</span>
+          <span style="font-size:12px;color:var(--text3)" id="tableInfoDash"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="main-table">
+            <thead><tr>
+              <th>Time</th><th>Solar (Wh)</th><th>Consumption (Wh)</th>
+              <th>Battery</th><th>Sell (Wh)</th><th>Buy (Wh)</th>
+              <th>Price (₩)</th><th>Tolerance</th><th>Action</th>
+            </tr></thead>
+            <tbody id="tableBodyDash"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="pageInfoDash"></span>
+          <button class="btn" id="prevBtnDash" onclick="changePageDash(-1)">← Prev</button>
+          <button class="btn" id="nextBtnDash" onclick="changePageDash(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  TAB 1: MATCHING ENGINE                                   -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tab-matching" class="tab-content active">
+
+    <!-- Quick Guide -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
+
+      <!-- How matching works -->
+      <div class="card" style="border-color:rgba(74,222,128,0.2)">
+        <div class="card-body" style="padding:0.875rem 1.125rem">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="font-size:1.25rem;flex-shrink:0">⚡</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:6px">How Matching Works</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                The engine runs a <strong style="color:var(--text)">Double-Auction</strong> per timeslot —
+                sellers sorted by lowest ask, buyers by highest bid.<br>
+                A match occurs when <strong style="color:var(--text)">buyer max price ≥ seller min price</strong>.
+                Clearing price = midpoint of the two bounds.<br>
+                Unmatched surplus → <span style="color:var(--blue)">Grida export @ SMP</span>.
+                Unmatched deficit → <span style="color:var(--blue)">Grida import @ retail rate</span>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Why matching fails -->
+      <div class="card" style="border-color:rgba(251,146,60,0.2)">
+        <div class="card-body" style="padding:0.875rem 1.125rem">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="font-size:1.25rem;flex-shrink:0">⚠️</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px">Why Matching Can Fail</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                <strong style="color:var(--text)">① Timeslot mismatch</strong> — sellers and buyers active at different hours.<br>
+                <strong style="color:var(--text)">② Price gap</strong> — seller min price > buyer max price.<br>
+                <strong style="color:var(--text)">③ Tight tolerance</strong> — 0–5% leaves little room to find overlap.<br>
+                Fix: align hours, lower ask / raise bid, or increase tolerance %.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-tier tip -->
+      <div class="card" style="border-color:rgba(251,191,36,0.2)">
+        <div class="card-body" style="padding:0.875rem 1.125rem">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="font-size:1.25rem;flex-shrink:0">💡</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:6px">Multi-Tier Bidding</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                Submit <strong style="color:var(--text)">multiple rows for the same hour</strong> at different prices
+                to capture more matches while protecting margin.
+                The cheapest sell tier is matched first.
+              </div>
+              <div style="margin-top:8px;font-size:11px;font-family:monospace;background:var(--bg3);border-radius:var(--radius);padding:7px 10px;color:var(--text2);line-height:1.9">
+                user1, 14:00, <span style="color:var(--green)">400Wh</span>, <span style="color:var(--orange)">₩950</span>, 15% &nbsp;← cheap tier<br>
+                user1, 14:00, <span style="color:var(--green)">300Wh</span>, <span style="color:var(--yellow)">₩1150</span>, 10% ← mid tier<br>
+                user1, 14:00, <span style="color:var(--green)">150Wh</span>, <span style="color:var(--purple)">₩1380</span>, 5% &nbsp;← premium
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grida rates tip -->
+      <div class="card" style="border-color:rgba(96,165,250,0.2)">
+        <div class="card-body" style="padding:0.875rem 1.125rem">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="font-size:1.25rem;flex-shrink:0">🔌</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px">Grida Fallback Rates</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                Set the <strong style="color:var(--text)">SMP rate</strong> (what Grida pays sellers for surplus)
+                and <strong style="color:var(--text)">Retail rate</strong> (what Grida charges buyers for deficit)
+                before running matching.<br>
+                P2P savings are calculated relative to these rates —
+                the wider the gap between SMP and retail, the more valuable P2P trading becomes.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="upload-pair">
+      <div class="upload-zone sell-zone" id="sellZone" onclick="document.getElementById('sellInput').click()">
+        <div class="upload-icon">📗</div>
+        <h3>Sell Orders CSV</h3>
+        <p>session_sell.csv</p>
+        <div class="file-name" id="sellFileName"></div>
+        <input type="file" id="sellInput" accept=".csv" style="display:none">
+      </div>
+      <div class="upload-zone buy-zone" id="buyZone" onclick="document.getElementById('buyInput').click()">
+        <div class="upload-icon">📙</div>
+        <h3>Buy Orders CSV</h3>
+        <p>session_buy.csv</p>
+        <div class="file-name" id="buyFileName"></div>
+        <input type="file" id="buyInput" accept=".csv" style="display:none">
+      </div>
+    </div>
+
+
+
+    <!-- Grida Rate Settings -->
+    <div class="rate-panel">
+      <div class="rate-panel-title">⚡ Grida Rate Settings</div>
+      <div class="rate-inputs">
+        <div class="rate-field"><label>SMP Rate — seller fallback (₩/Wh)</label><input type="number" id="smpRateInput" value="900" min="1" step="1"></div>
+        <div class="rate-field"><label>Retail Rate — buyer fallback (₩/Wh)</label><input type="number" id="retailRateInput" value="1300" min="1" step="1"></div>
+      </div>
+      <div class="rate-hint">SMP = price Grida pays sellers for unmatched surplus. Retail = price Grida charges buyers for unmatched deficit. P2P savings are calculated against these rates.</div>
+    </div>
+
+    <button class="run-btn" id="runMatchBtn" onclick="runMatching()" disabled>
+      ⚡ Run Matching Engine
+    </button>
+
+    <div class="alert" id="alertMatch"></div>
+    <div class="loading" id="loadingMatch"><span class="spinner"></span>Running Double-Auction matching...</div>
+
+    <div id="matchingResults" style="display:none">
+
+      <!-- Zero trade warning -->
+      <div id="zeroTradeWarning" style="display:none;margin-bottom:1.5rem">
+        <div class="card" style="border-color:rgba(251,146,60,0.4)">
+          <div class="card-body" style="padding:1rem 1.25rem;display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:1.5rem;flex-shrink:0">⚠️</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px">
+                No P2P Trades — All Energy Routed to Grida
+              </div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8" id="zeroTradeReason"></div>
+              <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">
+                <div style="background:var(--bg3);border-radius:var(--radius);padding:8px 10px">
+                  <div style="color:var(--text3);margin-bottom:3px">Common causes</div>
+                  <div style="color:var(--text2)">
+                    ① Timeslots don't overlap<br>
+                    ② Price gap too large<br>
+                    ③ Tolerance too tight (0-5%)
+                  </div>
+                </div>
+                <div style="background:var(--bg3);border-radius:var(--radius);padding:8px 10px">
+                  <div style="color:var(--text3);margin-bottom:3px">Seller fix</div>
+                  <div style="color:var(--text2)">
+                    Lower ask price<br>
+                    Increase tolerance<br>
+                    Match buyer hours
+                  </div>
+                </div>
+                <div style="background:var(--bg3);border-radius:var(--radius);padding:8px 10px">
+                  <div style="color:var(--text3);margin-bottom:3px">Buyer fix</div>
+                  <div style="color:var(--text2)">
+                    Raise bid price<br>
+                    Increase tolerance<br>
+                    Match seller hours
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dataset summaries -->
+      <p class="section-title">Dataset Overview</p>
+      <div class="dataset-grid" id="datasetGrid"></div>
+
+      <!-- Matching summary metrics -->
+      <p class="section-title">Matching Results</p>
+      <div class="metrics-grid" id="matchMetrics"></div>
+    <div class="card" style="margin-bottom:1.75rem;display:none" id="gridaProfitCard">
+      <div class="card-header"><span class="card-title">🔌 Grida Net Position</span></div>
+      <div id="gridaProfitBody" class="card-body" style="padding:1rem 1.25rem"></div>
+    </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Matched Volume per Timeslot (Wh)</div>
+          <div style="position:relative;height:200px"><canvas id="chartMatchedVol" role="img" aria-label="Matched volume per timeslot"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Clearing Price per Trade (₩)</div>
+          <div style="position:relative;height:200px"><canvas id="chartClearing" role="img" aria-label="Clearing price per trade"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Matched trades table -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-header">
+          <span class="card-title">Matched Trades</span>
+          <span class="badge badge-matched" id="tradeCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="main-table">
+            <thead><tr>
+              <th>Timeslot</th><th>Seller</th><th>Buyer</th>
+              <th>Volume (Wh)</th><th>Clearing Price</th><th>Total Value</th>
+              <th>Seller Min</th><th>Buyer Max</th>
+            </tr></thead>
+            <tbody id="matchedTradesBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="pageInfoTrades"></span>
+          <button class="btn" id="prevTrades" onclick="changePageTrades(-1)">← Prev</button>
+          <button class="btn" id="nextTrades" onclick="changePageTrades(1)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <p class="section-title">User Leaderboard</p>
+      <div class="leaderboard card" id="leaderboardWrap" style="overflow-x:auto;min-width:0">
+        <div class="lb-row lb-header">
+          <div>Rank</div>
+          <div>User</div>
+          <div>Score</div>
+          <div style="text-align:center">Match%</div>
+          <div style="text-align:center">Vol (Wh)</div>
+          <div style="text-align:right">P2P Saving</div>
+          <div style="text-align:right">Net Position</div>
+          <div style="text-align:right">Revenue</div>
+          <div style="text-align:right">Buy Cost</div>
+          <div style="text-align:center">Role</div>
+        </div>
+        <div id="leaderboardBody"></div>
+      </div>
+
+      <!-- Grida fallback -->
+      <p class="section-title">Grida Fallback</p>
+      <div class="grida-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Unmatched Sell → Grida Export</span>
+            <span class="badge badge-grida" id="unmatchedSellCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="main-table">
+              <thead><tr><th>Timeslot</th><th>Seller</th><th>Volume (Wh)</th><th>SMP Rate</th><th>Value</th></tr></thead>
+              <tbody id="unmatchedSellBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Unmatched Buy → Grida Import</span>
+            <span class="badge badge-grida" id="unmatchedBuyCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="main-table">
+              <thead><tr><th>Timeslot</th><th>Buyer</th><th>Volume (Wh)</th><th>Retail Rate</th><th>Value</th></tr></thead>
+              <tbody id="unmatchedBuyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  TAB 3: AI FORECAST                                        -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tab-forecast" class="tab-content">
+
+    <!-- Data source from Tab 1 -->
+    <div id="forecastDataPanel" class="card" style="margin-bottom:1.25rem">
+      <div class="card-body" style="display:flex;align-items:center;gap:14px;padding:1rem 1.25rem">
+        <div id="forecastDataIcon" style="font-size:1.75rem">📂</div>
+        <div style="flex:1">
+          <div id="forecastDataTitle" style="font-size:14px;font-weight:500;color:var(--text2)">
+            No data loaded yet
+          </div>
+          <div id="forecastDataSub" style="font-size:12px;color:var(--text3);margin-top:2px">
+            Please upload a history CSV in Tab 2 (History &amp; Dataset) first
+          </div>
+        </div>
+        <button class="btn" onclick="switchTab('matching')" id="goToDashBtn">
+          Go to Tab 1 →
+        </button>
+      </div>
+    </div>
+
+    <button class="run-btn" id="trainBtn" onclick="runTrain()" disabled>
+      🧠 Train ARIMA Model
+    </button>
+
+    <div class="alert" id="alertForecast"></div>
+    <div class="loading" id="loadingTrain"><span class="spinner"></span>Training ARIMA model...</div>
+    <div class="loading" id="loadingPredict" style="display:none"><span class="spinner"></span>Generating 24h forecast...</div>
+
+    <div id="forecastResults" style="display:none">
+
+      <!-- Model info -->
+      <p class="section-title">Model Info</p>
+      <div class="metrics-grid" id="modelMetrics"></div>
+
+      <!-- Forecast chart -->
+      <div class="chart-card" style="margin-bottom:1.5rem">
+        <div class="chart-title">24h Price Forecast (₩)</div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>Predicted price</div>
+          <div class="legend-item"><span class="legend-dot" style="background:rgba(255,255,255,0.15);border:1px dashed #555"></span>Avg price</div>
+        </div>
+        <div style="position:relative;height:220px">
+          <canvas id="chartForecast" role="img" aria-label="24 hour price forecast"></canvas>
+        </div>
+      </div>
+
+      <!-- Action breakdown -->
+      <p class="section-title">Forecast Actions</p>
+      <div class="metrics-grid" id="forecastActionMetrics"></div>
+
+      <!-- Forecast table -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <span class="card-title">Hourly Forecast</span>
+          <span style="font-size:12px;color:var(--text3)" id="forecastUser"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="main-table">
+            <thead><tr>
+              <th>Time</th><th>Predicted Price</th><th>vs Avg</th>
+              <th>Action</th><th>Volume (Wh)</th><th>Tolerance</th>
+            </tr></thead>
+            <tbody id="forecastTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Download -->
+      <div style="display:flex;gap:10px;margin-bottom:1.25rem">
+        <button class="run-btn" style="margin:0;flex:1" onclick="downloadAiSession()">
+          ⬇ Download AI Session CSV (ZIP)
+        </button>
+      </div>
+
+      <!-- Note: AI Matching moved to Tab 4 -->
+      <div class="card" style="margin-bottom:1.25rem;border-color:rgba(167,139,250,0.3)">
+        <div class="card-body" style="padding:1rem 1.25rem;display:flex;align-items:center;gap:12px">
+          <div style="font-size:1.5rem">✅</div>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text)">Forecast ready</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">
+              Go to <strong>Comparison tab</strong> to run AI matching and compare results.
+            </div>
+          </div>
+          <button class="btn" style="margin-left:auto" onclick="switchTab('comparison')">
+            Go to Tab 4 →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  TAB 4: COMPARISON                                         -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tab-comparison" class="tab-content">
+
+    <!-- Run AI Matching Panel (moved from Tab 3) -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header">
+        <span class="card-title">🤖 AI Session Setup</span>
+        <span style="font-size:12px;color:var(--text3)" id="aiSessionSubtitle">Train model in Tab 3 first</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem">
+        <div id="aiMatchInfoPanel" style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.8">
+          Complete Tab 2 (manual matching) and Tab 3 (AI forecast) first.
+        </div>
+        <div id="aiMatchStatus" style="margin-bottom:1rem"></div>
+        <button class="run-btn" style="margin:0" id="runAiMatchBtn" onclick="runAiMatching()" disabled>
+          ⚡ Run AI Matching — Replace &amp; Compare
+        </button>
+        <div class="loading" id="loadingAiMatch" style="display:none;margin-top:1rem">
+          <span class="spinner"></span>Running AI matching...
+        </div>
+        <div class="alert" id="alertAiMatch" style="margin-top:1rem"></div>
+      </div>
+    </div>
+
+    <!-- Gate: shown when results not ready -->
+    <div id="comparisonGate">
+      <div style="text-align:center;padding:3rem;color:var(--text3);font-size:13px" id="gateMessage">
+        Run AI Matching above to see comparison results.
+      </div>
+    </div>
+
+    <!-- Results: shown after both sessions complete -->
+    <div id="comparisonContent" style="display:none">
+
+      <!-- General insight note -->
+      <div class="card" style="margin-bottom:1.5rem;border-color:rgba(96,165,250,0.25)">
+        <div class="card-body" style="padding:0.875rem 1.125rem;display:flex;gap:12px;align-items:flex-start">
+          <div style="font-size:1.25rem;flex-shrink:0">📌</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            <strong style="color:var(--blue)">How to read this comparison</strong><br>
+            The AI session replaces only the trained user's manual bids with ARIMA-predicted values —
+            all other users keep their original manual inputs.
+            A higher AI score means the prediction found better trading opportunities than manual input.
+            A lower AI score is also valid — it means the user's manual strategy was already well-optimized,
+            or the prediction window did not align well with the session.
+            <strong style="color:var(--text)">Neither outcome is wrong</strong> — this comparison helps
+            each user decide whether AI assistance adds value for their specific trading pattern.
+          </div>
+        </div>
+      </div>
+
+      <!-- Focused user comparison -->
+      <p class="section-title" id="compFocusTitle">AI User Performance — Manual vs AI</p>
+      <div id="compFocusCard" style="margin-bottom:1.75rem"></div>
+
+      <!-- Overall session metrics -->
+      <p class="section-title">Overall Session Comparison</p>
+      <div id="compMetrics" style="margin-bottom:1.25rem"></div>
+
+      <!-- Grida comparison -->
+      <p class="section-title">Grida Net Position — Manual vs AI</p>
+      <div id="compGrida" style="margin-bottom:1.75rem"></div>
+
+      <!-- Side-by-side charts -->
+      <div class="charts-grid" style="margin-bottom:1.75rem">
+        <div class="chart-card">
+          <div class="chart-title">Matched Volume — Manual Session</div>
+          <div style="position:relative;height:190px">
+            <canvas id="chartCompManual" role="img" aria-label="Manual matched volume"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Matched Volume — AI Session</div>
+          <div style="position:relative;height:190px">
+            <canvas id="chartCompAI" role="img" aria-label="AI matched volume"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context: unchanged users -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem">
+        <p class="section-title" style="margin:0">Full Session Leaderboard — All Users</p>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--text3)">Sort by:</span>
+          <button class="btn" id="sortManualBtn" onclick="sortLb('manual')" style="font-size:11px;padding:3px 10px">Manual Score</button>
+          <button class="btn" id="sortAiBtn"     onclick="sortLb('ai')"     style="font-size:11px;padding:3px 10px">AI Score</button>
+          <button class="btn" id="sortDeltaBtn"  onclick="sortLb('delta')"  style="font-size:11px;padding:3px 10px">Δ Score</button>
+        </div>
+      </div>
+      <div id="lbContext"
+ style="margin-bottom:1.75rem"></div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  API CONFIGURATION
+//  Change API_BASE_URL to switch between environments:
+//    Local Flask  : 'http://localhost:5000'
+//    cPanel server: 'https://yourdomain.com'  (or '' to use same origin)
+// ══════════════════════════════════════════════════════════════
+const API_CONFIG = {
+  // ── Auto-detect environment ───────────────────────────────
+  // When served by Flask (http/https) → use same origin ('')
+  // When opened as local file (file://) → use SERVER_URL below
+  SERVER_URL: 'https://p2p.q4s.kr',  // ← your cPanel domain
+};
+
+// Helper: auto-detect and prepend correct base URL
+function api(path) {
+  const isFile = window.location.protocol === 'file:';
+  const base   = isFile ? API_CONFIG.SERVER_URL : '';
+  return base + path;
+}
+
+// Show environment in status pill
+(function() {
+  const pill    = document.getElementById('statusPill');
+  if (!pill) return;
+  const isFile  = window.location.protocol === 'file:';
+  const server  = API_CONFIG.SERVER_URL.replace('https://','').replace('http://','');
+  if (isFile) {
+    pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · ' + server + ' (remote)';
+  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · Local';
+  } else {
+    pill.innerHTML = '<span class="status-dot"></span>API · Same Origin';
+  }
+})();
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name) {
+  const names = ['matching','dashboard','forecast','comparison'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'forecast')    syncAiMatchPanel();
+  if (name === 'comparison')  renderComparison();
+}
+
+// ── Sync Tab 1 data to Tab 3 panel ──────────────────────────
+function syncForecastPanel() {
+  if (!allData || allData.length === 0) return;
+  const user = allData[0].user || 'unknown';
+  const rows = allData.length;
+  document.getElementById('forecastDataIcon').textContent = '✅';
+  document.getElementById('forecastDataTitle').textContent =
+    `Ready: ${rows} rows loaded for ${user}`;
+  document.getElementById('forecastDataSub').textContent =
+    `From Tab 1 — ${allData[0]['Time(KST)']} to ${allData[allData.length-1]['Time(KST)']}`;
+  document.getElementById('goToDashBtn').style.display = 'none';
+  document.getElementById('trainBtn').disabled = false;
+}
+
+function syncAiMatchPanel() {
+  const panel = document.getElementById('aiMatchInfoPanel');
+  if (!panel) return;
+  if (!manualResult) {
+    panel.innerHTML = `
+      <div style="color:var(--orange);font-size:13px">
+        ⚠️ Tab 2 (Matching Engine) result required.<br>
+        <span style="color:var(--text3);font-size:12px">
+          Please upload session_sell.csv + session_buy.csv in Tab 2 and run matching first.
+        </span>
+      </div>
+      <button class="btn" style="margin-top:8px" onclick="switchTab('matching')">
+        Go to Matching Engine →
+      </button>`;
+    document.getElementById('runAiMatchBtn').disabled = true;
+  } else {
+    const users = [...new Set(
+      (manualResult.sell_summary?.per_user||[]).map(u=>u.user)
+      .concat((manualResult.buy_summary?.per_user||[]).map(u=>u.user))
+    )];
+    const aiUser = forecastResult ? forecastResult.user : null;
+    panel.innerHTML = `
+      <div style="color:var(--text2);font-size:13px;line-height:1.8">
+        ✅ Tab 2 session — <strong style="color:var(--text)">${users.length} users</strong>
+        (${users.join(', ')})<br>
+        ${aiUser
+          ? `🤖 AI forecast ready for <strong style="color:var(--purple)">${aiUser}</strong>
+             — their manual rows will be replaced with predicted values.<br>
+             All other users keep their manual inputs.`
+          : `<span style="color:var(--orange)">⚠️ No AI forecast yet — train a model in Tab 3 first.</span>`
+        }
+      </div>`;
+    const subtitle = document.getElementById('aiSessionSubtitle');
+    if (subtitle) subtitle.textContent = aiUser
+      ? `${aiUser} → AI prediction ready`
+      : 'Train model in Tab 3 first';
+    const btn = document.getElementById('runAiMatchBtn');
+    if (btn) btn.disabled = !(forecastResult && manualResult);
+  }
+}
+
+// ── Shared helpers ────────────────────────────────────────────
+const n   = v => parseInt(v) || 0;
+const fmt = v => n(v).toLocaleString('en-US');
+const won = v => '₩' + n(v).toLocaleString('en-US');
+const PAGE_SIZE = 12;
+
+function showAlert(id, msg, type='error') {
+  const el = document.getElementById(id);
+  el.className = 'alert alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 6000);
+}
+
+function makeChart(id, type, labels, datasets, extraOpts={}) {
+  const existing = Chart.getChart(id);
+  if (existing) existing.destroy();
+  return new Chart(document.getElementById(id), {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#555a6a', font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:8 }, grid: { color:'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color:'#555a6a', font:{size:10} }, grid: { color:'rgba(255,255,255,0.04)' } }
+      },
+      ...extraOpts
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB 1 — DASHBOARD
+// ════════════════════════════════════════════════════════════════
+let allData=[], dayKeys=[], currentDay=0, dashPage=0;
+let manualResult=null, aiMatchResult=null;
+let forecastResult=null, trainedUser=null;
+
+const zone  = document.getElementById('uploadZone');
+const input = document.getElementById('csvInput');
+zone.addEventListener('click', () => input.click());
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) uploadDash(e.dataTransfer.files[0]); });
+input.addEventListener('change', e => { if (e.target.files[0]) uploadDash(e.target.files[0]); });
+
+function uploadDash(file) {
+  document.getElementById('fileName').textContent = '📄 ' + file.name;
+  document.getElementById('loadingDash').style.display = 'block';
+  document.getElementById('dashboardContent').style.display = 'none';
+  const fd = new FormData(); fd.append('file', file);
+  fetch(api('/api/upload-csv'), { method:'POST', body:fd })
+    .then(r => r.json()).then(res => {
+      document.getElementById('loadingDash').style.display = 'none';
+      if (res.error) { showAlert('alertDash', 'Error: ' + res.error); return; }
+      showAlert('alertDash', `Loaded ${res.stats.total_rows} rows — ${res.stats.user}`, 'success');
+      loadDashboard(res.data, res.stats);
+    })
+    .catch(err => { document.getElementById('loadingDash').style.display='none'; showAlert('alertDash','Upload failed: '+err.message); });
+}
+
+function groupByDay(data) {
+  const days = {};
+  data.forEach(r => { const d = r['Time(KST)'].split(' ')[0]; if (!days[d]) days[d]=[]; days[d].push(r); });
+  return days;
+}
+
+function loadDashboard(data, stats) {
+  allData = data;
+  const days = groupByDay(data);
+  dayKeys = Object.keys(days);
+  renderMetrics(stats);
+  const sel = document.getElementById('daySelect');
+  sel.innerHTML = dayKeys.map((d,i) => `<option value="${i}">${d}</option>`).join('');
+  sel.onchange = () => { currentDay=parseInt(sel.value); dashPage=0; renderDay(days[dayKeys[currentDay]]); };
+  renderDay(days[dayKeys[0]]);
+  document.getElementById('dashboardContent').style.display = 'block';
+  syncForecastPanel();
+}
+
+function renderMetrics(s) {
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total Sold</div><div class="metric-value green">${fmt(s.total_sold_wh)}</div><div class="metric-sub">Wh over ${dayKeys.length} days</div></div>
+    <div class="metric-card"><div class="metric-label">Total Bought</div><div class="metric-value orange">${fmt(s.total_bought_wh)}</div><div class="metric-sub">Wh over ${dayKeys.length} days</div></div>
+    <div class="metric-card"><div class="metric-label">Sell Hours</div><div class="metric-value green">${s.sell_hours}</div><div class="metric-sub">of ${s.total_rows} total hours</div></div>
+    <div class="metric-card"><div class="metric-label">Buy Hours</div><div class="metric-value orange">${s.buy_hours}</div><div class="metric-sub">of ${s.total_rows} total hours</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Price</div><div class="metric-value blue">₩${Math.round(s.avg_price_won).toLocaleString('en-US')}</div><div class="metric-sub">per Wh</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Solar</div><div class="metric-value">${Math.round(s.avg_solar_wh).toLocaleString('en-US')}</div><div class="metric-sub">Wh per hour</div></div>`;
+}
+
+function renderDay(d) {
+  const labels = d.map(r => r['Time(KST)'].split(' ')[1]);
+  makeChart('chartSolar','line',labels,[
+    {label:'Solar',data:d.map(r=>n(r['Solar_gen(Wh)'])),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,0.08)',tension:0.4,pointRadius:2,fill:true,borderWidth:1.5},
+    {label:'Consumption',data:d.map(r=>n(r['Consumption(Wh)'])),borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.08)',tension:0.4,pointRadius:2,fill:true,borderWidth:1.5}
+  ]);
+  const battMax = n(d[0]['Battery_max(Wh)']) || 5000;
+  makeChart('chartBattery','line',labels,[
+    {label:'Battery',data:d.map(r=>n(r['Battery_level(Wh)'])),borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.1)',tension:0.4,pointRadius:2,fill:true,borderWidth:1.5}
+  ],{scales:{x:{ticks:{color:'#555a6a',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},y:{min:0,max:battMax,ticks:{color:'#555a6a',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}});
+  makeChart('chartTrade','bar',labels,[
+    {label:'Sell',data:d.map(r=>n(r['Power_sell(Wh)'])),backgroundColor:'rgba(74,222,128,0.7)',borderRadius:3},
+    {label:'Buy',data:d.map(r=>n(r['Power_buy(Wh)'])),backgroundColor:'rgba(251,146,60,0.7)',borderRadius:3}
+  ]);
+  makeChart('chartPrice','line',labels,[
+    {label:'Price',data:d.map(r=>n(r['Price(Won)'])),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.08)',tension:0.4,pointRadius:2,fill:true,borderWidth:1.5}
+  ]);
+  renderDashTable(d);
+}
+
+function renderDashTable(d) {
+  const total=d.length, pages=Math.ceil(total/PAGE_SIZE), start=dashPage*PAGE_SIZE;
+  document.getElementById('tableInfoDash').textContent = total + ' rows';
+  document.getElementById('tableBodyDash').innerHTML = d.slice(start,start+PAGE_SIZE).map(r => {
+    const act=(r['Action']||'idle').toLowerCase();
+    const bc=act==='sell'?'badge-sell':act==='buy'?'badge-buy':'badge-idle';
+    const bl=act==='sell'?'Sell':act==='buy'?'Buy':'Idle';
+    const bp=Math.round(n(r['Battery_level(Wh)'])/(n(r['Battery_max(Wh)'])||5000)*100);
+    return `<tr>
+      <td>${r['Time(KST)'].split(' ')[1]}</td>
+      <td>${fmt(r['Solar_gen(Wh)'])}</td><td>${fmt(r['Consumption(Wh)'])}</td>
+      <td><div class="batt-bar-wrap"><div class="batt-bar"><div class="batt-fill" style="width:${bp}%"></div></div><span class="batt-pct">${bp}%</span></div></td>
+      <td style="color:${n(r['Power_sell(Wh)'])>0?'var(--green)':'var(--text2)'}">${fmt(r['Power_sell(Wh)'])}</td>
+      <td style="color:${n(r['Power_buy(Wh)'])>0?'var(--orange)':'var(--text2)'}">${fmt(r['Power_buy(Wh)'])}</td>
+      <td>${won(r['Price(Won)'])}</td><td>${r['Tolerance(%)']||10}%</td>
+      <td><span class="badge ${bc}">${bl}</span></td></tr>`;
+  }).join('');
+  document.getElementById('pageInfoDash').textContent=`Page ${dashPage+1} / ${pages}`;
+  document.getElementById('prevBtnDash').disabled=dashPage===0;
+  document.getElementById('nextBtnDash').disabled=dashPage>=pages-1;
+}
+
+function changePageDash(dir) {
+  const days=groupByDay(allData), d=days[dayKeys[currentDay]];
+  dashPage=Math.max(0,Math.min(dashPage+dir,Math.ceil(d.length/PAGE_SIZE)-1));
+  renderDashTable(d);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB 2 — MATCHING ENGINE
+// ════════════════════════════════════════════════════════════════
+let sellFile=null, buyFile=null, tradesData=[], tradesPage=0;
+
+function setupDropzone(zoneId, inputId, fileNameId, fileVar, color) {
+  const z=document.getElementById(zoneId), inp=document.getElementById(inputId);
+  z.addEventListener('dragover', e=>{e.preventDefault();z.classList.add('drag-over');});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag-over'));
+  z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)setFile(fileVar,f,fileNameId);});
+  inp.addEventListener('change',e=>{if(e.target.files[0])setFile(fileVar,e.target.files[0],fileNameId);});
+}
+
+function setFile(which, file, nameId) {
+  document.getElementById(nameId).textContent = '📄 ' + file.name;
+  if (which==='sell') sellFile=file; else buyFile=file;
+  document.getElementById('runMatchBtn').disabled = !(sellFile && buyFile);
+}
+
+setupDropzone('sellZone','sellInput','sellFileName','sell','green');
+setupDropzone('buyZone','buyInput','buyFileName','buy','orange');
+
+function runMatching() {
+  if (!sellFile || !buyFile) return;
+  document.getElementById('loadingMatch').style.display='block';
+  document.getElementById('matchingResults').style.display='none';
+  document.getElementById('runMatchBtn').disabled=true;
+
+  const smpRate   = parseInt(document.getElementById('smpRateInput').value)   || 900;
+  const retailRate= parseInt(document.getElementById('retailRateInput').value) || 1300;
+  const fd=new FormData();
+  fd.append('sell_file',   sellFile);
+  fd.append('buy_file',    buyFile);
+  fd.append('smp_rate',    smpRate);
+  fd.append('retail_rate', retailRate);
+
+  fetch(api('/api/match'), {method:'POST', body:fd})
+    .then(r=>r.json()).then(res=>{
+      document.getElementById('loadingMatch').style.display='none';
+      document.getElementById('runMatchBtn').disabled=false;
+      if (res.error) { showAlert('alertMatch','Error: '+res.error); return; }
+      manualResult = res;
+      const trades = res.summary.total_trades;
+      if (trades === 0) {
+        showAlert('alertMatch',
+          '⚠️ No trades matched. All energy routed to Grida fallback. ' +
+          'Check that sell and buy timeslots overlap and prices are compatible.',
+          'error');
+      } else {
+        showAlert('alertMatch', `Matching complete — ${trades} trade${trades!==1?'s':''} found.`, 'success');
+      }
+      renderMatchingResults(res);
+    })
+    .catch(err=>{
+      document.getElementById('loadingMatch').style.display='none';
+      document.getElementById('runMatchBtn').disabled=false;
+      showAlert('alertMatch','Failed: '+err.message);
+    });
+}
+
+function renderMatchingResults(res) {
+  const s = res.summary;
+
+  // Dataset summaries
+  document.getElementById('datasetGrid').innerHTML = '';
+  renderDatasetSummary(res.sell_summary, 'sell');
+  renderDatasetSummary(res.buy_summary,  'buy');
+
+  // Show zero trade warning if no matches
+  const zeroWarn = document.getElementById('zeroTradeWarning');
+  const zeroReason = document.getElementById('zeroTradeReason');
+  if (res.summary.total_trades === 0) {
+    zeroWarn.style.display = 'block';
+    // Diagnose why
+    const sellTs  = new Set((res.unmatched_sell||[]).map(u => u.timeslot));
+    const buyTs   = new Set((res.unmatched_buy||[]).map(u => u.timeslot));
+    const overlap = [...sellTs].filter(ts => buyTs.has(ts));
+    if (overlap.length === 0) {
+      zeroReason.innerHTML = '<strong style="color:var(--orange)">Timeslot mismatch</strong> — ' +
+        'Sell orders and buy orders have no hours in common. ' +
+        'Sellers are active at: <strong>' + [...sellTs].map(t=>t.split(' ')[1]).slice(0,5).join(', ') + '</strong>. ' +
+        'Buyers are active at: <strong>' + [...buyTs].map(t=>t.split(' ')[1]).slice(0,5).join(', ') + '</strong>.';
+    } else {
+      zeroReason.innerHTML = '<strong style="color:var(--orange)">Price gap too large</strong> — ' +
+        'Timeslots overlap at ' + overlap.length + ' hour(s) but no seller&#39;s minimum price is ' +
+        'lower than any buyer&#39;s maximum price. Try lowering ask prices or increasing tolerance %.';
+    }
+  } else {
+    zeroWarn.style.display = 'none';
+  }
+
+  // Matching metrics
+  document.getElementById('matchMetrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total Trades</div><div class="metric-value purple">${s.total_trades}</div><div class="metric-sub">matched pairs</div></div>
+    <div class="metric-card"><div class="metric-label">Matched Volume</div><div class="metric-value green">${fmt(s.total_matched_wh)}</div><div class="metric-sub">Wh traded P2P</div></div>
+    <div class="metric-card"><div class="metric-label">Traded Value</div><div class="metric-value green">${won(s.total_matched_value)}</div><div class="metric-sub">total settlement</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Clearing</div><div class="metric-value blue">${won(s.avg_clearing_price)}</div><div class="metric-sub">per Wh</div></div>
+    <div class="metric-card"><div class="metric-label">Grida Export</div><div class="metric-value orange">${fmt(s.grida_export_wh)}</div><div class="metric-sub">Wh @ ₩${s.smp_rate} SMP</div></div>
+    <div class="metric-card"><div class="metric-label">Grida Import</div><div class="metric-value orange">${fmt(s.grida_import_wh)}</div><div class="metric-sub">Wh @ ₩${s.retail_rate} retail</div></div>`;
+
+  // Grida profit card
+  const gp = s.grida_profit || 0;
+  const gpColor = gp >= 0 ? 'var(--green)' : 'var(--orange)';
+  const gpLabel = gp >= 0 ? 'Net Gain' : 'Net Loss';
+  document.getElementById('gridaProfitCard').style.display = 'block';
+  document.getElementById('gridaProfitBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;font-size:13px">
+      <div>
+        <div style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Revenue from buyers (import)</div>
+        <div style="color:var(--green);font-weight:600;font-size:16px">${won(s.grida_import_value)}</div>
+        <div style="color:var(--text3);font-size:11px">${fmt(s.grida_import_wh)} Wh × ₩${s.retail_rate} retail</div>
+      </div>
+      <div>
+        <div style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Cost to sellers (export)</div>
+        <div style="color:var(--orange);font-weight:600;font-size:16px">${won(s.grida_export_value)}</div>
+        <div style="color:var(--text3);font-size:11px">${fmt(s.grida_export_wh)} Wh × ₩${s.smp_rate} SMP</div>
+      </div>
+      <div style="border-left:2px solid var(--border);padding-left:12px">
+        <div style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Grida ${gpLabel}</div>
+        <div style="color:${gpColor};font-weight:700;font-size:20px">${won(Math.abs(gp))}</div>
+        <div style="color:var(--text3);font-size:11px">import revenue − export cost</div>
+      </div>
+    </div>`;
+
+  // Charts
+  const tradesByTs = {};
+  res.matched_trades.forEach(t => {
+    if (!tradesByTs[t.timeslot]) tradesByTs[t.timeslot]={wh:0,count:0};
+    tradesByTs[t.timeslot].wh += t.matched_wh;
+    tradesByTs[t.timeslot].count++;
+  });
+  const tsLabels = Object.keys(tradesByTs).map(ts=>ts.split(' ')[1]||ts);
+  makeChart('chartMatchedVol','bar',tsLabels,[
+    {label:'Matched Wh',data:Object.values(tradesByTs).map(v=>v.wh),backgroundColor:'rgba(167,139,250,0.7)',borderRadius:3}
+  ]);
+  makeChart('chartClearing','line',res.matched_trades.map((_,i)=>i+1),[
+    {label:'Clearing',data:res.matched_trades.map(t=>t.clearing_price),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.08)',tension:0.3,pointRadius:2,borderWidth:1.5}
+  ]);
+
+  // Trades table
+  tradesData = res.matched_trades;
+  tradesPage = 0;
+  document.getElementById('tradeCount').textContent = tradesData.length + ' trades';
+  renderTradesTable();
+
+  // Grida tables
+  document.getElementById('unmatchedSellCount').textContent = res.unmatched_sell.length + ' orders';
+  document.getElementById('unmatchedSellBody').innerHTML = res.unmatched_sell.map(u=>`
+    <tr><td>${u.timeslot}</td><td>${u.seller}</td><td>${fmt(u.remaining_wh)}</td>
+    <td>${won(u.fallback_price)}</td><td>${won(u.fallback_value)}</td></tr>`).join('');
+
+  document.getElementById('unmatchedBuyCount').textContent = res.unmatched_buy.length + ' orders';
+  document.getElementById('unmatchedBuyBody').innerHTML = res.unmatched_buy.map(u=>`
+    <tr><td>${u.timeslot}</td><td>${u.buyer}</td><td>${fmt(u.remaining_wh)}</td>
+    <td>${won(u.fallback_price)}</td><td>${won(u.fallback_value)}</td></tr>`).join('');
+
+  renderLeaderboard(res.leaderboard || []);
+  document.getElementById('matchingResults').style.display='block';
+}
+
+function renderDatasetSummary(ds, mode) {
+  const color  = mode==='sell' ? 'var(--green)' : 'var(--orange)';
+  const label  = mode==='sell' ? 'Sell Orders' : 'Buy Orders';
+  const whCol  = mode==='sell' ? 'Power_sell' : 'Power_buy';
+  const grid   = document.getElementById('datasetGrid');
+
+  const card = document.createElement('div');
+  card.className = 'dataset-card';
+  card.innerHTML = `
+    <div class="dataset-header">
+      <div class="dataset-dot" style="background:${color}"></div>
+      <span>${label}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">${ds.date_start} → ${ds.date_end}</span>
+    </div>
+    <div class="dataset-stats">
+      <div class="dataset-stat"><div class="dataset-stat-label">Orders</div><div class="dataset-stat-value">${ds.total_orders}</div></div>
+      <div class="dataset-stat"><div class="dataset-stat-label">Total Wh</div><div class="dataset-stat-value">${fmt(ds.total_wh)}</div></div>
+      <div class="dataset-stat"><div class="dataset-stat-label">Timeslots</div><div class="dataset-stat-value">${ds.timeslots}</div></div>
+    </div>
+    <table class="user-table">
+      <thead><tr><th>User</th><th>Orders</th><th>Total Wh</th><th>Avg Price</th><th>Avg Tol</th></tr></thead>
+      <tbody>${ds.per_user.map(u=>`
+        <tr>
+          <td style="font-weight:500">${u.user}</td>
+          <td>${u.orders}</td>
+          <td>${fmt(u.total_wh)}</td>
+          <td style="color:${color}">${won(u.avg_price)}</td>
+          <td>${u.avg_tol}%</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  grid.appendChild(card);
+}
+
+function renderLeaderboard(lb) {
+  const medals = {1:'🥇',2:'🥈',3:'🥉'};
+  const maxScore = lb[0] ? lb[0].score : 100;
+  document.getElementById('leaderboardBody').innerHTML = lb.map(r => {
+    const medal     = medals[r.rank] || r.rank + '.';
+    const roleColor = r.role==='seller'?'var(--green)':r.role==='buyer'?'var(--orange)':'var(--blue)';
+    const barPct    = Math.round(r.score / maxScore * 100);
+    const barColor  = r.rank===1?'#4ade80':r.rank===2?'#a78bfa':r.rank===3?'#fbbf24':'#60a5fa';
+    const netColor = (r.net_position||0) >= 0 ? 'var(--green)' : 'var(--orange)';
+    return `<div class="lb-row">
+      <div class="lb-rank">${medal}</div>
+      <div style="font-weight:600">${r.user}</div>
+      <div>
+        <div class="lb-bar-wrap">
+          <div class="lb-bar"><div class="lb-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+          <span class="lb-num" style="font-size:12px;font-weight:600;color:${barColor};min-width:32px">${r.score}</span>
+        </div>
+      </div>
+      <div class="lb-num">${r.match_rate}%</div>
+      <div class="lb-num">${fmt(r.matched_wh)} Wh</div>
+      <div class="lb-num" style="color:var(--green);font-weight:500">${won(r.p2p_saving)}</div>
+      <div class="lb-num" style="color:${netColor};font-weight:600;font-size:12px">${r.net_position != null ? won(r.net_position) : '—'}</div>
+      <div class="lb-num" style="color:var(--yellow);font-size:12px">${r.gross_revenue != null ? won(r.gross_revenue) : '—'}</div>
+      <div class="lb-num" style="color:var(--orange);font-size:12px">${r.total_buy_cost != null ? won(r.total_buy_cost) : '—'}</div>
+      <div><span class="badge" style="background:transparent;border-color:${roleColor};color:${roleColor}">${r.role}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTradesTable() {
+  const total=tradesData.length, pages=Math.ceil(total/PAGE_SIZE), start=tradesPage*PAGE_SIZE;
+  document.getElementById('matchedTradesBody').innerHTML = tradesData.slice(start,start+PAGE_SIZE).map(t=>`
+    <tr>
+      <td>${t.timeslot}</td>
+      <td style="color:var(--green);font-weight:500">${t.seller}</td>
+      <td style="color:var(--orange);font-weight:500">${t.buyer}</td>
+      <td>${fmt(t.matched_wh)}</td>
+      <td style="color:var(--yellow);font-weight:500">${won(t.clearing_price)}</td>
+      <td>${won(t.total_value)}</td>
+      <td style="color:var(--text2)">${won(t.seller_min)}</td>
+      <td style="color:var(--text2)">${won(t.buyer_max)}</td>
+    </tr>`).join('');
+  document.getElementById('pageInfoTrades').textContent=`Page ${tradesPage+1} / ${pages}`;
+  document.getElementById('prevTrades').disabled=tradesPage===0;
+  document.getElementById('nextTrades').disabled=tradesPage>=pages-1;
+}
+
+function changePageTrades(dir) {
+  tradesPage=Math.max(0,Math.min(tradesPage+dir,Math.ceil(tradesData.length/PAGE_SIZE)-1));
+  renderTradesTable();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB 3 — AI FORECAST
+// ════════════════════════════════════════════════════════════════
+
+
+function runTrain() {
+  if (!allData || allData.length === 0) {
+    showAlert('alertForecast', 'No data loaded. Please upload a history CSV in Tab 2 (History &amp; Dataset) first.');
+    return;
+  }
+  document.getElementById('loadingTrain').style.display = 'block';
+  document.getElementById('forecastResults').style.display = 'none';
+  document.getElementById('trainBtn').disabled = true;
+
+  // Convert allData back to CSV string and send as JSON
+  const cols = Object.keys(allData[0]);
+  const csvStr = cols.join(',') + '\n' +
+    allData.map(r => cols.map(c => r[c]).join(',')).join('\n');
+
+  fetch(api('/api/train'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csv_string: csvStr })
+  })
+    .then(r => r.json()).then(res => {
+      document.getElementById('loadingTrain').style.display = 'none';
+      document.getElementById('trainBtn').disabled = false;
+      if (res.error) { showAlert('alertForecast', 'Train error: ' + res.error); return; }
+      trainedUser = res.result.user;
+      showAlert('alertForecast',
+        `Model trained for ${trainedUser} — ${res.result.n_obs} observations`, 'success');
+      runPredict(trainedUser);
+    })
+    .catch(err => {
+      document.getElementById('loadingTrain').style.display = 'none';
+      document.getElementById('trainBtn').disabled = false;
+      showAlert('alertForecast', 'Failed: ' + err.message);
+    });
+}
+
+function getSessionDate() {
+  // Auto-detect first date from Tab 2 manual session
+  // Falls back to Tab 1 history data, then today
+  if (manualResult && manualResult.sell_summary && manualResult.sell_summary.date_start) {
+    return manualResult.sell_summary.date_start.split(' ')[0];
+  }
+  if (manualResult && manualResult.buy_summary && manualResult.buy_summary.date_start) {
+    return manualResult.buy_summary.date_start.split(' ')[0];
+  }
+  if (allData && allData.length > 0) {
+    return allData[0]['Time(KST)'].split(' ')[0];
+  }
+  return null; // let backend use today
+}
+
+function runPredict(user) {
+  document.getElementById('loadingPredict').style.display = 'block';
+
+  // Use session date from Tab 2 if available
+  const sessionDate = getSessionDate();
+  const dateParam   = sessionDate ? `?date=${sessionDate}` : '';
+
+  fetch(api(`/api/predict/${user}${dateParam}`))
+    .then(r => r.json()).then(res => {
+      document.getElementById('loadingPredict').style.display = 'none';
+      if (res.error) { showAlert('alertForecast', 'Predict error: ' + res.error); return; }
+      forecastResult = res.result;
+      renderForecast(res.result);
+    })
+    .catch(err => {
+      document.getElementById('loadingPredict').style.display = 'none';
+      showAlert('alertForecast', 'Predict failed: ' + err.message);
+    });
+}
+
+function renderForecast(r) {
+  const m = r.model_meta;
+
+  // Model metrics
+  document.getElementById('modelMetrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">User</div>
+      <div class="metric-value purple">${r.user}</div><div class="metric-sub">trained model</div></div>
+    <div class="metric-card"><div class="metric-label">Training Obs</div>
+      <div class="metric-value">${m.n_obs}</div><div class="metric-sub">hourly data points</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Price</div>
+      <div class="metric-value blue">${won(m.avg_price)}</div><div class="metric-sub">historical</div></div>
+    <div class="metric-card"><div class="metric-label">Volatility</div>
+      <div class="metric-value">${won(m.std_price)}</div><div class="metric-sub">std dev</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Solar</div>
+      <div class="metric-value green">${Math.round(m.avg_solar).toLocaleString('en-US')}</div>
+      <div class="metric-sub">Wh/hr avg</div></div>
+    <div class="metric-card"><div class="metric-label">ARIMA Order</div>
+      <div class="metric-value" style="font-size:15px">${m.arima_order.join(',')}</div>
+      <div class="metric-sub">p, d, q</div></div>`;
+
+  // Forecast chart
+  const labels  = r.forecast.map(f => f.hour.split(' ')[1]);
+  const prices  = r.forecast.map(f => f.price);
+  const avgLine = new Array(24).fill(Math.round(m.avg_price));
+  const bgColors = r.forecast.map(f =>
+    f.action === 'sell' ? 'rgba(74,222,128,0.25)' :
+    f.action === 'buy'  ? 'rgba(251,146,60,0.25)' :
+    'rgba(255,255,255,0.03)'
+  );
+  makeChart('chartForecast', 'bar', labels, [
+    { label: 'Price', data: prices, backgroundColor: bgColors, borderColor: bgColors.map(c => c.replace('0.25','0.8')), borderWidth: 1, borderRadius: 3 },
+    { label: 'Avg',   data: avgLine, type: 'line', borderColor: 'rgba(255,255,255,0.2)', borderDash: [4,3], pointRadius: 0, borderWidth: 1 }
+  ]);
+
+  // Action metrics
+  document.getElementById('forecastActionMetrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Sell Hours</div>
+      <div class="metric-value green">${r.sell_count}</div><div class="metric-sub">of 24 hours</div></div>
+    <div class="metric-card"><div class="metric-label">Buy Hours</div>
+      <div class="metric-value orange">${r.buy_count}</div><div class="metric-sub">of 24 hours</div></div>
+    <div class="metric-card"><div class="metric-label">Idle Hours</div>
+      <div class="metric-value">${r.idle_count}</div><div class="metric-sub">of 24 hours</div></div>
+    <div class="metric-card"><div class="metric-label">Total Sell Vol</div>
+      <div class="metric-value green">${fmt(r.sell_rows.reduce((s,x)=>s+x['Power_sell(Wh)'],0))}</div>
+      <div class="metric-sub">Wh offered</div></div>
+    <div class="metric-card"><div class="metric-label">Total Buy Vol</div>
+      <div class="metric-value orange">${fmt(r.buy_rows.reduce((s,x)=>s+x['Power_buy(Wh)'],0))}</div>
+      <div class="metric-sub">Wh requested</div></div>
+    <div class="metric-card"><div class="metric-label">Forecast Date</div>
+      <div class="metric-value" style="font-size:14px">${r.forecast_date}</div>
+      <div class="metric-sub">24h window</div></div>`;
+
+  // Forecast user label
+  document.getElementById('forecastUser').textContent = r.user + ' — ' + r.forecast_date;
+
+  // Table
+  document.getElementById('forecastTableBody').innerHTML = r.forecast.map(f => {
+    const act = f.action;
+    const bc  = act==='sell'?'badge-sell':act==='buy'?'badge-buy':'badge-idle';
+    const bl  = act==='sell'?'Sell':act==='buy'?'Buy':'Idle';
+    const wh  = act==='sell'?f.sell_wh:act==='buy'?f.buy_wh:0;
+    const devColor = f.deviation > 0 ? 'var(--green)' : f.deviation < 0 ? 'var(--orange)' : 'var(--text2)';
+    const devSym   = f.deviation > 0 ? '↑' : '↓';
+    return `<tr>
+      <td>${f.hour.split(' ')[1]}</td>
+      <td style="font-weight:500;color:var(--purple)">${won(f.price)}</td>
+      <td style="color:${devColor}">${devSym}${Math.abs(f.deviation)}%</td>
+      <td><span class="badge ${bc}">${bl}</span></td>
+      <td style="color:${act==='sell'?'var(--green)':act==='buy'?'var(--orange)':'var(--text3)'}">
+        ${wh > 0 ? fmt(wh) + ' Wh' : '—'}
+      </td>
+      <td>${f.tolerance}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('forecastResults').style.display = 'block';
+  syncAiMatchPanel();
+  if (manualResult) document.getElementById('runAiMatchBtn').disabled = false;
+}
+
+function downloadAiSession() {
+  if (!trainedUser) return;
+  const sessionDate = getSessionDate();
+  const dateParam   = sessionDate ? `?date=${sessionDate}` : '';
+  window.location.href = api(`/api/predict/${trainedUser}/download${dateParam}`);
+}
+
+function runAiMatching() {
+  // Gate: need forecast + Tab 2 manual session
+  if (!forecastResult || !forecastResult.sell_rows) {
+    showAlert('alertAiMatch', 'No forecast data. Train a model first.'); return;
+  }
+  if (!manualResult) {
+    showAlert('alertAiMatch', 'Tab 2 manual matching required first. Run matching in Tab 2 first.'); return;
+  }
+
+  const aiUser = forecastResult.user;
+
+  // ── Build AI sell CSV ─────────────────────────────────────
+  // Start from Tab 2 manual sell orders, remove aiUser rows, add AI forecast rows
+  const manualSellRows = manualResult.sell_summary
+    ? buildRowsFromSummary(manualResult, 'sell', aiUser) : [];
+
+  const aiSellRows = forecastResult.sell_rows.map(r =>
+    [r.user, r['Time(KST)'], r['Power_sell(Wh)'], r['Price(Won)'], r['Tolerance(%)']].join(',')
+  );
+
+  const sellHeader = 'user,Time(KST),Power_sell(Wh),Price(Won),Tolerance(%)';
+  const sellCsv = sellHeader + '\n' +
+    [...manualSellRows, ...aiSellRows].join('\n');
+
+  // ── Build AI buy CSV ──────────────────────────────────────
+  // Start from Tab 2 manual buy orders, remove aiUser rows, add AI forecast rows
+  const manualBuyRows = manualResult.buy_summary
+    ? buildRowsFromSummary(manualResult, 'buy', aiUser) : [];
+
+  const aiBuyRows = forecastResult.buy_rows.map(r =>
+    [r.user, r['Time(KST)'], r['Power_buy(Wh)'], r['Price(Won)'], r['Tolerance(%)']].join(',')
+  );
+
+  const buyHeader = 'user,Time(KST),Power_buy(Wh),Price(Won),Tolerance(%)';
+  const buyCsv = buyHeader + '\n' +
+    [...manualBuyRows, ...aiBuyRows].join('\n');
+
+  // Show what we built
+  const statusEl = document.getElementById('aiMatchStatus');
+  statusEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+      <div class="metric-card" style="padding:8px 12px">
+        <div class="metric-label">Sell CSV</div>
+        <div style="color:var(--green);font-weight:500">
+          ${manualSellRows.length} manual + ${aiSellRows.length} AI rows
+          <span style="color:var(--text3)">(${aiUser} replaced)</span>
+        </div>
+      </div>
+      <div class="metric-card" style="padding:8px 12px">
+        <div class="metric-label">Buy CSV</div>
+        <div style="color:var(--orange);font-weight:500">
+          ${manualBuyRows.length} manual + ${aiBuyRows.length} AI rows
+          <span style="color:var(--text3)">(${aiUser} replaced)</span>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('loadingAiMatch').style.display = 'block';
+
+  // ── Send to /api/match via JSON ───────────────────────────
+  const smpRate    = parseInt(document.getElementById('smpRateInput')?.value)    || 900;
+  const retailRate = parseInt(document.getElementById('retailRateInput')?.value) || 1300;
+
+  fetch(api('/api/match-json'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sell_csv:    sellCsv,
+      buy_csv:     buyCsv,
+      smp_rate:    smpRate,
+      retail_rate: retailRate,
+    })
+  })
+    .then(r => r.json()).then(res => {
+      document.getElementById('loadingAiMatch').style.display = 'none';
+      if (res.error) { showAlert('alertAiMatch', 'Match error: ' + res.error); return; }
+      aiMatchResult = res;
+      const t = res.summary.total_trades;
+      showAlert('alertAiMatch',
+        `AI matching complete — ${t} trade${t!==1?'s':''} found. Scroll down to see results.`,
+        'success');
+      renderComparison();
+    })
+    .catch(err => {
+      document.getElementById('loadingAiMatch').style.display = 'none';
+      showAlert('alertAiMatch', 'Failed: ' + err.message);
+    });
+}
+
+// Helper: rebuild sell/buy rows from matched_trades + unmatched for a given mode
+// excluding the AI user (they will be replaced by forecast)
+function buildRowsFromSummary(result, mode, excludeUser) {
+  // Reconstruct original orders from sell_summary / buy_summary per_user
+  const summary = mode === 'sell' ? result.sell_summary : result.buy_summary;
+  if (!summary || !summary.per_user) return [];
+
+  const powerCol = mode === 'sell' ? 'Power_sell(Wh)' : 'Power_buy(Wh)';
+  const header   = mode === 'sell'
+    ? 'user,Time(KST),Power_sell(Wh),Price(Won),Tolerance(%)'
+    : 'user,Time(KST),Power_buy(Wh),Price(Won),Tolerance(%)';
+
+  // We stored matched + unmatched — rebuild from matched_trades and unmatched arrays
+  const rows = [];
+  const seen = new Set();
+
+  // From matched trades
+  const trades = result.matched_trades || [];
+  trades.forEach(t => {
+    const u = mode === 'sell' ? t.seller : t.buyer;
+    if (u === excludeUser) return;
+    const key = `${u}|${t.timeslot}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      const wh   = mode === 'sell' ? t.matched_wh : t.matched_wh;
+      const price = mode === 'sell' ? t.seller_min : t.buyer_max;
+      rows.push([u, t.timeslot, wh, price, 10].join(','));
+    }
+  });
+
+  // From unmatched
+  const unmatched = mode === 'sell' ? (result.unmatched_sell || []) : (result.unmatched_buy || []);
+  unmatched.forEach(u => {
+    const user = mode === 'sell' ? u.seller : u.buyer;
+    if (user === excludeUser) return;
+    const key = `${user}|${u.timeslot}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      rows.push([user, u.timeslot, u.remaining_wh, u.fallback_price, 10].join(','));
+    }
+  });
+
+  return rows;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB 4 — COMPARISON
+// ════════════════════════════════════════════════════════════════
+function renderComparison() {
+  const gate    = document.getElementById('comparisonGate');
+  const comp    = document.getElementById('comparisonContent');
+
+  // Update AI session setup panel
+  syncAiMatchPanel();
+
+  if (!aiMatchResult) {
+    gate.style.display = 'block'; comp.style.display = 'none'; return;
+  }
+
+  gate.style.display = 'none'; comp.style.display = 'block';
+
+  const aiUser = forecastResult ? forecastResult.user : null;
+  const M = manualResult.summary;
+  const A = aiMatchResult.summary;
+
+  // ── Focused user card (AI user only) ──────────────────────
+  const mlMap = Object.fromEntries((manualResult.leaderboard||[]).map(r=>[r.user,r]));
+  const alMap = Object.fromEntries((aiMatchResult.leaderboard||[]).map(r=>[r.user,r]));
+
+  if (aiUser) {
+    document.getElementById('compFocusTitle').textContent =
+      `${aiUser} — Manual Input vs AI Prediction`;
+
+    const mU = mlMap[aiUser] || {};
+    const aU = alMap[aiUser] || {};
+
+    const focusRows = [
+      { label:'Score',          mVal: mU.score,       aVal: aU.score,       fmt: v=>v,              lower:false },
+      { label:'Match Rate',     mVal: mU.match_rate,  aVal: aU.match_rate,  fmt: v=>v+'%',          lower:false },
+      { label:'Matched Volume', mVal: mU.matched_wh,  aVal: aU.matched_wh,  fmt: v=>fmt(v)+' Wh',  lower:false },
+      { label:'P2P Saving',     mVal: mU.p2p_saving,  aVal: aU.p2p_saving,  fmt: v=>won(v),         lower:false },
+      { label:'Avg Clearing',   mVal: mU.avg_clearing,aVal: aU.avg_clearing,fmt: v=>won(v),         lower:false },
+      { label:'Grida Fallback', mVal: mU.grida_wh,    aVal: aU.grida_wh,    fmt: v=>fmt(v)+' Wh',  lower:true  },
+    ];
+
+    const better = (mV,aV,low=false) => {
+      if (mV==null||aV==null) return 'tie';
+      if (low) return mV<aV?'manual':mV>aV?'ai':'tie';
+      return mV>aV?'manual':mV<aV?'ai':'tie';
+    };
+
+    const mWins = focusRows.filter(r=>better(r.mVal,r.aVal,r.lower)==='manual').length;
+    const aWins = focusRows.filter(r=>better(r.mVal,r.aVal,r.lower)==='ai').length;
+    const winner = mWins>aWins?'Manual':aWins>mWins?'AI':'Tie';
+    const wColor = winner==='AI'?'var(--purple)':winner==='Manual'?'var(--green)':'var(--yellow)';
+
+    document.getElementById('compFocusCard').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 100px 1fr;gap:12px;align-items:start">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--green)">📋 Manual Input</span>
+            <span class="badge badge-sell">${mWins} wins</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            ${focusRows.map(r=>{
+              const w=better(r.mVal,r.aVal,r.lower);
+              const hl=w==='manual'?'color:var(--green);font-weight:600':w==='tie'?'':'color:var(--text2)';
+              const val = r.mVal!=null ? r.fmt(r.mVal) : '—';
+              return `<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 12px;color:var(--text2);font-size:12px">${r.label}</td>
+                <td style="padding:8px 12px;text-align:right;${hl}">${val} ${w==='manual'?'🏆':''}</td>
+              </tr>`;
+            }).join('')}
+          </table>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0.5rem">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)">Winner</div>
+          <div style="font-size:24px;font-weight:700;color:${wColor}">${winner}</div>
+          <div style="font-size:11px;color:var(--text2)">${mWins}–${aWins}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">${aiUser}</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--purple)">🤖 AI Prediction</span>
+            <span class="badge" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,0.3)">${aWins} wins</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            ${focusRows.map(r=>{
+              const w=better(r.mVal,r.aVal,r.lower);
+              const hl=w==='ai'?'color:var(--purple);font-weight:600':w==='tie'?'':'color:var(--text2)';
+              const val = r.aVal!=null ? r.fmt(r.aVal) : '—';
+              return `<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 12px;color:var(--text2);font-size:12px">${r.label}</td>
+                <td style="padding:8px 12px;text-align:right;${hl}">${val} ${w==='ai'?'🏆':''}</td>
+              </tr>`;
+            }).join('')}
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ── Overall session metrics ────────────────────────────────
+  const sessionRows = [
+    { label:'Total Trades',       mVal:M.total_trades,       aVal:A.total_trades,       lower:false, fmt:v=>v },
+    { label:'Matched Volume (Wh)',mVal:M.total_matched_wh,   aVal:A.total_matched_wh,   lower:false, fmt:v=>fmt(v)+' Wh'},
+    { label:'Total Value',        mVal:M.total_matched_value,aVal:A.total_matched_value,lower:false, fmt:v=>won(v)},
+    { label:'Avg Clearing',       mVal:M.avg_clearing_price, aVal:A.avg_clearing_price, lower:false, fmt:v=>won(v)},
+    { label:'Grida Export (Wh)',  mVal:M.grida_export_wh,    aVal:A.grida_export_wh,    lower:true,  fmt:v=>fmt(v)+' Wh'},
+    { label:'Grida Import (Wh)',  mVal:M.grida_import_wh,    aVal:A.grida_import_wh,    lower:true,  fmt:v=>fmt(v)+' Wh'},
+    { label:'Grida Net',          mVal:M.grida_profit||0,    aVal:A.grida_profit||0,    lower:false,
+      fmt:v => `<span style="color:${v>=0?'var(--green)':'var(--orange)'};font-weight:600">${won(Math.abs(v))} ${v>=0?'gain':'loss'}</span>` },
+  ];
+  const betterS = (mV,aV,low=false)=> low?(mV<aV?'manual':mV>aV?'ai':'tie'):(mV>aV?'manual':mV<aV?'ai':'tie');
+  const mSWins = sessionRows.filter(r=>betterS(r.mVal,r.aVal,r.lower)==='manual').length;
+  const aSWins = sessionRows.filter(r=>betterS(r.mVal,r.aVal,r.lower)==='ai').length;
+
+  document.getElementById('compMetrics').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 100px 1fr;gap:12px;align-items:start">
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Manual Session</span>
+          <span class="badge badge-sell">${mSWins} wins</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          ${sessionRows.map(r=>{
+            const w=betterS(r.mVal,r.aVal,r.lower);
+            const hl=w==='manual'?'color:var(--green);font-weight:600':w==='tie'?'':'color:var(--text2)';
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px 12px;color:var(--text2);font-size:12px">${r.label}</td>
+              <td style="padding:8px 12px;text-align:right;${hl}">${r.fmt(r.mVal)} ${w==='manual'?'🏆':w==='tie'?'🤝':''}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0.5rem">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)">Session</div>
+        <div style="font-size:18px;font-weight:700;color:${mSWins>aSWins?'var(--green)':aSWins>mSWins?'var(--purple)':'var(--yellow)'}">
+          ${mSWins>aSWins?'Manual':aSWins>mSWins?'AI':'Tie'}
+        </div>
+        <div style="font-size:11px;color:var(--text2)">${mSWins}–${aSWins}</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🤖 AI Session</span>
+          <span class="badge" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,0.3)">${aSWins} wins</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          ${sessionRows.map(r=>{
+            const w=betterS(r.mVal,r.aVal,r.lower);
+            const hl=w==='ai'?'color:var(--purple);font-weight:600':w==='tie'?'':'color:var(--text2)';
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px 12px;color:var(--text2);font-size:12px">${r.label}</td>
+              <td style="padding:8px 12px;text-align:right;${hl}">${r.fmt(r.aVal)} ${w==='ai'?'🏆':w==='tie'?'🤝':''}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+      </div>
+    </div>`;
+
+  // ── Grida side-by-side card ───────────────────────────────
+  const mgp  = M.grida_profit || 0;
+  const agp  = A.grida_profit || 0;
+  const mgpColor = mgp >= 0 ? 'var(--green)'  : 'var(--orange)';
+  const agpColor = agp >= 0 ? 'var(--green)'  : 'var(--orange)';
+  const mgpLabel = mgp >= 0 ? 'Net Gain' : 'Net Loss';
+  const agpLabel = agp >= 0 ? 'Net Gain' : 'Net Loss';
+
+  document.getElementById('compGrida').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card" style="border-color:rgba(74,222,128,0.2)">
+        <div class="card-header"><span class="card-title">🔌 Grida — Manual Session</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">
+          <div style="background:var(--bg2);padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Revenue (Import)</div>
+            <div style="font-size:14px;font-weight:600;color:var(--green)">${won(M.grida_import_value||0)}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(M.grida_import_wh||0)} Wh × ₩${M.retail_rate}</div>
+          </div>
+          <div style="background:var(--bg2);padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cost (Export)</div>
+            <div style="font-size:14px;font-weight:600;color:var(--orange)">${won(M.grida_export_value||0)}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(M.grida_export_wh||0)} Wh × ₩${M.smp_rate}</div>
+          </div>
+          <div style="background:var(--bg2);padding:10px 12px;border-left:2px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Grida ${mgpLabel}</div>
+            <div style="font-size:16px;font-weight:700;color:${mgpColor}">${won(Math.abs(mgp))}</div>
+            <div style="font-size:10px;color:var(--text3)">import − export</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(167,139,250,0.2)">
+        <div class="card-header"><span class="card-title">🔌 Grida — AI Session</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">
+          <div style="background:var(--bg2);padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Revenue (Import)</div>
+            <div style="font-size:14px;font-weight:600;color:var(--green)">${won(A.grida_import_value||0)}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(A.grida_import_wh||0)} Wh × ₩${A.retail_rate}</div>
+          </div>
+          <div style="background:var(--bg2);padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cost (Export)</div>
+            <div style="font-size:14px;font-weight:600;color:var(--orange)">${won(A.grida_export_value||0)}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(A.grida_export_wh||0)} Wh × ₩${A.smp_rate}</div>
+          </div>
+          <div style="background:var(--bg2);padding:10px 12px;border-left:2px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Grida ${agpLabel}</div>
+            <div style="font-size:16px;font-weight:700;color:${agpColor}">${won(Math.abs(agp))}</div>
+            <div style="font-size:10px;color:var(--text3)">import − export</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // ── Charts ─────────────────────────────────────────────────
+  const buildVol = (res) => {
+    const byTs = {};
+    (res.matched_trades||[]).forEach(t=>{
+      if (!byTs[t.timeslot]) byTs[t.timeslot]=0;
+      byTs[t.timeslot]+=t.matched_wh;
+    });
+    return {labels:Object.keys(byTs).map(ts=>ts.split(' ')[1]||ts), data:Object.values(byTs)};
+  };
+  const mv = buildVol(manualResult);
+  const av = buildVol(aiMatchResult);
+  makeChart('chartCompManual','bar',mv.labels,[{label:'Wh',data:mv.data,backgroundColor:'rgba(74,222,128,0.65)',borderRadius:3}]);
+  makeChart('chartCompAI',   'bar',av.labels,[{label:'Wh',data:av.data,backgroundColor:'rgba(167,139,250,0.65)',borderRadius:3}]);
+
+  // ── Full leaderboard: all users, both sessions ────────────
+  window._lbMlMap = mlMap;
+  window._lbAlMap = alMap;
+  window._lbAiUser = aiUser;
+  sortLb('manual'); // default sort
+}
+
+// ── Sortable leaderboard ──────────────────────────────────────
+function sortLb(by) {
+  const mlMap  = window._lbMlMap || {};
+  const alMap  = window._lbAlMap || {};
+  const aiUser = window._lbAiUser || null;
+  if (!mlMap || !Object.keys(mlMap).length) return;
+
+  // Update active button
+  ['sortManualBtn','sortAiBtn','sortDeltaBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.color = '';
+  });
+  const activeId = by==='manual'?'sortManualBtn':by==='ai'?'sortAiBtn':'sortDeltaBtn';
+  const activeEl = document.getElementById(activeId);
+  if (activeEl) activeEl.style.color = 'var(--green)';
+
+  const allLbUsers = [...new Set([...Object.keys(mlMap),...Object.keys(alMap)])];
+
+  // Build rows with computed values
+  const rows = allLbUsers.map(u => {
+    const m = mlMap[u] || {};
+    const a = alMap[u] || {};
+    const mScore = m.score != null ? m.score : null;
+    const aScore = a.score != null ? a.score : null;
+    const delta  = (aScore != null && mScore != null) ? +(aScore - mScore).toFixed(1) : null;
+    return { u, m, a, mScore, aScore, delta, isAiUser: u===aiUser };
+  });
+
+  // Sort
+  rows.sort((x,y) => {
+    if (by === 'manual') return (y.mScore||0) - (x.mScore||0);
+    if (by === 'ai')     return (y.aScore||0) - (x.aScore||0);
+    if (by === 'delta')  return (y.delta||0)  - (x.delta||0);
+    return 0;
+  });
+
+  document.getElementById('lbContext').innerHTML = `
+    <div class="card"><div class="table-wrap"><table class="main-table">
+      <thead><tr>
+        <th>User</th>
+        <th style="cursor:pointer" onclick="sortLb('manual')">Manual Score ${by==='manual'?'▼':''}</th>
+        <th>Manual Match%</th><th>Manual P2P Saving</th>
+        <th>Manual Net</th><th>Manual Revenue</th><th>Manual Buy Cost</th><th style="cursor:pointer" onclick="sortLb('ai')">AI Score ${by==='ai'?'▼':''}</th>
+        <th>AI Match%</th><th>AI P2P Saving</th>
+        <th>AI Net</th><th>AI Revenue</th><th>AI Buy Cost</th><th style="cursor:pointer" onclick="sortLb('delta')">Δ Score ${by==='delta'?'▼':''}</th>
+        <th>Mode</th>
+      </tr></thead>
+      <tbody>${rows.map(({u,m,a,mScore,aScore,delta,isAiUser}) => {
+        const deltaColor = delta==null?'var(--text3)':delta>0?'var(--purple)':delta<0?'var(--orange)':'var(--text2)';
+        const deltaSym   = delta==null?'—':delta>0?'↑'+delta:delta<0?'↓'+Math.abs(delta):'=';
+        const rowStyle   = isAiUser ? 'background:rgba(167,139,250,0.06);border-left:2px solid rgba(167,139,250,0.5)' : '';
+        return `<tr style="${rowStyle}">
+          <td style="font-weight:600">${u}</td>
+          <td style="color:var(--green)">${mScore??'—'}</td>
+          <td>${m.match_rate!=null?m.match_rate+'%':'—'}</td>
+          <td style="color:var(--green)">${m.p2p_saving!=null?won(m.p2p_saving):'—'}</td>
+          <td style="color:${(m.net_position||0)>=0?'var(--green)':'var(--orange)'};font-weight:600;font-size:12px">${m.net_position!=null?won(m.net_position):'—'}</td>
+          <td style="color:var(--yellow);font-size:12px">${m.gross_revenue!=null?won(m.gross_revenue):'—'}</td>
+          <td style="color:var(--orange);font-size:12px">${m.total_buy_cost!=null?won(m.total_buy_cost):'—'}</td>
+          <td style="color:var(--purple)">${aScore??'—'}</td>
+          <td>${a.match_rate!=null?a.match_rate+'%':'—'}</td>
+          <td style="color:var(--purple)">${a.p2p_saving!=null?won(a.p2p_saving):'—'}</td>
+          <td style="color:${(a.net_position||0)>=0?'var(--green)':'var(--orange)'};font-weight:600;font-size:12px">${a.net_position!=null?won(a.net_position):'—'}</td>
+          <td style="color:var(--yellow);font-size:12px">${a.gross_revenue!=null?won(a.gross_revenue):'—'}</td>
+          <td style="color:var(--orange);font-size:12px">${a.total_buy_cost!=null?won(a.total_buy_cost):'—'}</td>
+          <td style="color:${deltaColor};font-weight:600">${deltaSym}</td>
+          <td style="font-size:11px">${isAiUser
+            ? '<span class="badge" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,0.3)">🤖 AI</span>'
+            : '<span class="badge badge-idle">manual</span>'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div></div>`;
+}
+
+</script>
+<footer style="
+  border-top: 1px solid var(--border);
+  padding: 1.25rem 2rem;
+  margin-top: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="
+      width:32px;height:32px;
+      background:var(--green-dim);
+      border:1px solid rgba(74,222,128,0.3);
+      border-radius:8px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:16px;flex-shrink:0
+    ">⚡</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text)">P2P Local Energy Trading Platform</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:1px">Microgrid Market Matchmaking Engine — Simulation</div>
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:12px;color:var(--text2)">
+      © <span id="footerYear"></span> Energy ICT Laboratory
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px">
+      Chonnam National University, Republic of Korea
+    </div>
+  </div>
+</footer>
+<script>
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
