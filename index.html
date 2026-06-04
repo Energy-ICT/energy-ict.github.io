@@ -761,7 +761,7 @@ function api(path) {
   } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · Local';
   } else {
-    pill.innerHTML = '<span class="status-dot"></span>API · Python Server';
+    pill.innerHTML = '<span class="status-dot"></span>API · Same Origin';
   }
 })();
 
