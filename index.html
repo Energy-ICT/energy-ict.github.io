@@ -881,8 +881,14 @@ function uploadDash(file) {
   document.getElementById('fileName').textContent = '📄 ' + file.name;
   document.getElementById('loadingDash').style.display = 'block';
   document.getElementById('dashboardContent').style.display = 'none';
-  const fd = new FormData(); fd.append('file', file);
-  fetch(api('/api/upload-csv'), { method:'POST', body:fd })
+  // Read file as text and send as JSON
+  const reader = new FileReader();
+  reader.onload = e => {
+    fetch(api('/api/upload-csv-json'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv_string: e.target.result })
+    })
     .then(r => r.json()).then(res => {
       document.getElementById('loadingDash').style.display = 'none';
       if (res.error) { showAlert('alertDash', 'Error: ' + res.error); return; }
@@ -890,6 +896,9 @@ function uploadDash(file) {
       loadDashboard(res.data, res.stats);
     })
     .catch(err => { document.getElementById('loadingDash').style.display='none'; showAlert('alertDash','Upload failed: '+err.message); });
+  };
+  reader.onerror = () => { document.getElementById('loadingDash').style.display='none'; showAlert('alertDash','Failed to read file.'); };
+  reader.readAsText(file);
 }
 
 function groupByDay(data) {
@@ -997,15 +1006,20 @@ function runMatching() {
   document.getElementById('matchingResults').style.display='none';
   document.getElementById('runMatchBtn').disabled=true;
 
-  const smpRate   = parseInt(document.getElementById('smpRateInput').value)   || 900;
-  const retailRate= parseInt(document.getElementById('retailRateInput').value) || 1300;
-  const fd=new FormData();
-  fd.append('sell_file',   sellFile);
-  fd.append('buy_file',    buyFile);
-  fd.append('smp_rate',    smpRate);
-  fd.append('retail_rate', retailRate);
+  const smpRate    = parseInt(document.getElementById('smpRateInput').value)   || 900;
+  const retailRate = parseInt(document.getElementById('retailRateInput').value) || 1300;
 
-  fetch(api('/api/match'), {method:'POST', body:fd})
+  // Read both files as text then send as JSON (more reliable on Passenger WSGI)
+  Promise.all([
+    new Promise((res,rej) => { const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsText(sellFile); }),
+    new Promise((res,rej) => { const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsText(buyFile); })
+  ]).then(([sellCsv, buyCsv]) => {
+    return fetch(api('/api/match-json'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sell_csv: sellCsv, buy_csv: buyCsv, smp_rate: smpRate, retail_rate: retailRate })
+    });
+  })
     .then(r=>r.json()).then(res=>{
       document.getElementById('loadingMatch').style.display='none';
       document.getElementById('runMatchBtn').disabled=false;
