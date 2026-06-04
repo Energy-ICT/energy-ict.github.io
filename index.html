@@ -737,31 +737,45 @@
 //    cPanel server: 'https://yourdomain.com'  (or '' to use same origin)
 // ══════════════════════════════════════════════════════════════
 const API_CONFIG = {
-  // ── Auto-detect environment ───────────────────────────────
-  // When served by Flask (http/https) → use same origin ('')
-  // When opened as local file (file://) → use SERVER_URL below
+  // ── Server URL ────────────────────────────────────────────
+  // URL of the cPanel Flask API server
   SERVER_URL: 'https://p2p.q4s.kr',  // ← your cPanel domain
 };
 
-// Helper: auto-detect and prepend correct base URL
+// Helper: auto-detect correct base URL
+// Uses SERVER_URL when:
+//   - opened as local file (file://)
+//   - hosted on a different domain (e.g. GitHub Pages)
+// Uses same origin ('') when:
+//   - served directly by Flask on the same server
 function api(path) {
-  const isFile = window.location.protocol === 'file:';
-  const base   = isFile ? API_CONFIG.SERVER_URL : '';
+  const serverHost  = API_CONFIG.SERVER_URL.replace(/https?:\/\//, '').split('/')[0];
+  const currentHost = window.location.hostname;
+  const isFile      = window.location.protocol === 'file:';
+  const isSameHost  = currentHost === serverHost ||
+                      currentHost === 'localhost' ||
+                      currentHost === '127.0.0.1';
+  const base        = (isFile || !isSameHost) ? API_CONFIG.SERVER_URL : '';
   return base + path;
 }
 
 // Show environment in status pill
 (function() {
-  const pill    = document.getElementById('statusPill');
+  const pill       = document.getElementById('statusPill');
   if (!pill) return;
-  const isFile  = window.location.protocol === 'file:';
-  const server  = API_CONFIG.SERVER_URL.replace('https://','').replace('http://','');
+  const serverHost = API_CONFIG.SERVER_URL.replace(/https?:\/\//, '').split('/')[0];
+  const curHost    = window.location.hostname;
+  const isFile     = window.location.protocol === 'file:';
+  const isLocal    = curHost === 'localhost' || curHost === '127.0.0.1';
+  const isSame     = curHost === serverHost;
   if (isFile) {
-    pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · ' + server + ' (remote)';
-  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · ' + serverHost + ' (file)';
+  } else if (isLocal) {
     pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · Local';
-  } else {
+  } else if (isSame) {
     pill.innerHTML = '<span class="status-dot"></span>API · Same Origin';
+  } else {
+    pill.innerHTML = '<span class="status-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>API · ' + serverHost + ' (remote)';
   }
 })();
 
